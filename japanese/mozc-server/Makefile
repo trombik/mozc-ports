@@ -87,8 +87,9 @@ PKGNAMESUFFIX=	-server
 PKGMESSAGE=	${FILESDIR}/pkg-message
 
 # zip code
-MASTER_SITES+=	https://www.post.japanpost.jp/zipcode/dl/kogaki/zip/:kenall \
-		https://www.post.japanpost.jp/zipcode/dl/jigyosyo/zip/:jigyosyo
+ZIP_CODE_TAGNAME=	621d059fbcbfae17bfca15b439692bae934268c3
+MASTER_SITES+=	https://github.com/hiroyuki-komatsu/japanpost_zipcode/raw/${ZIP_CODE_TAGNAME}/:kenall \
+		https://github.com/hiroyuki-komatsu/japanpost_zipcode/raw/${ZIP_CODE_TAGNAME}/:jigyosyo
 DISTFILES+=	ken_all.zip:kenall \
 		jigyosyo.zip:jigyosyo
 # usage dictionary
