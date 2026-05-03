@@ -129,8 +129,8 @@ SKKJISYO_GH_TUPLE=	utuhiro78:mozcdic-ut-skk-jisyo:384ad92:skkjisyo
 SUDACHIDICT_GH_TUPLE=	utuhiro78:mozcdic-ut-sudachidict:6c8307c:sudachi
 # APACHE20 multi
 UTDIC_GH_TUPLE=		utuhiro78:merge-ut-dictionaries:aae6bec:ut
-UTDIC_MASTER_SITES=	https://dumps.wikimedia.org/jawiki/latest/:jawiki_latest_pages_articles_multistream_index
-UTDIC_DISTFILES=	jawiki-latest-pages-articles-multistream-index.txt.bz2:jawiki_latest_pages_articles_multistream_index
+
+.include "Makefile.jawiki_latest_pages_articles_multistream_index"
 
 .elif ${BUILD_MOZC_LIST:Mmozc_tool} == "mozc_tool"
 
@@ -253,7 +253,7 @@ post-patch-mozc_server:
 		${PATCH} < ${PATCHDIR}/extra-patch-merge_dictionaries.py && \
 		${REINPLACE_CMD} -e 's@%%WRKSRC%%@${WRKSRC}@' merge_dictionaries.py && \
 		${CP} ${BAZEL_WRKSRC}/data/dictionary_oss/id.def . && \
-		${CP} ${DISTDIR}/${DIST_SUBDIR}/${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@} . && \
+		${CP} ${DISTDIR}/${DIST_SUBDIR}/${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@} jawiki-latest-pages-articles-multistream-index.txt.bz2 && \
 		${BZCAT} ../../../mozcdic-ut-*/mozcdic-ut-*.txt.bz2 > mozcdic-ut.txt && \
 		${PYTHON_CMD} merge_dictionaries.py mozcdic-ut.txt && \
 		${CAT} mozcdic-ut.txt \
@@ -665,6 +665,13 @@ print-bazel-modules: configure
 
 # Create new distinfo: `make renew-makesum`
 renew-makesum:
+	@${FETCH_BINARY} \
+		https://dumps.wikimedia.org/jawiki/latest/jawiki-latest-pages-articles-multistream-index.txt.bz2-rss.xml -o - | \
+	${AWK} ' / href="/ \
+		{ sub(/.* href="/,""); sub(/".*/, ""); \
+		url=$$0; file=$$0; sub(/\/[^\/]+$$/, "/", url); sub(/.*\//, "", file); \
+		printf("UTDIC_MASTER_SITES+=\t%s:jawiki_latest_pages_articles_multistream_index\nUTDIC_DISTFILES+=\t%s:jawiki_latest_pages_articles_multistream_index\n", url, file); \
+		} ' > ${MASTERDIR}/Makefile.jawiki_latest_pages_articles_multistream_index
 	@for url in `${MAKE} fetch-url-list | ${GREP} -v 'FreeBSD\.org'`; do \
 		case $${url} in \
 		*${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@}) urls="$${urls} $${url}" ;; \
