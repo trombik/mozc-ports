@@ -41,7 +41,7 @@ USES=	compiler:c++20-lang gmake java:build localbase pkgconfig \
 	python:3.10+,build shebangfix tar:bzip2
 
 USE_GITHUB=	yes
-GH_TUPLE=	fcitx:mozc:ed7a47b
+GH_TUPLE=	fcitx:mozc:a897811
 GH_TUPLE+=	bazelbuild:bazel-central-registry:2d4a147:bcr
 
 JAVA_VERSION=	21
@@ -665,25 +665,13 @@ print-bazel-modules: configure
 
 # Create new distinfo: `make renew-makesum`
 renew-makesum:
-	@${FETCH_BINARY} \
+	@${FETCH_CMD} -q \
 		https://dumps.wikimedia.org/jawiki/latest/jawiki-latest-pages-articles-multistream-index.txt.bz2-rss.xml -o - | \
-	${AWK} ' / href="/ \
-		{ sub(/.* href="/,""); sub(/".*/, ""); \
-		url=$$0; file=$$0; sub(/\/[^\/]+$$/, "/", url); sub(/.*\//, "", file); \
-		printf("UTDIC_MASTER_SITES+=\t%s:jawiki_latest_pages_articles_multistream_index\nUTDIC_DISTFILES+=\t%s:jawiki_latest_pages_articles_multistream_index\n", url, file); \
-		} ' > ${MASTERDIR}/Makefile.jawiki_latest_pages_articles_multistream_index
-	@for url in `${MAKE} fetch-url-list | ${GREP} -v 'FreeBSD\.org'`; do \
-		case $${url} in \
-		*${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@}) urls="$${urls} $${url}" ;; \
-		*${DISTFILES:M*\:kenall:C@\:kenall@@}) urls="$${urls} $${url}" ;; \
-		*${DISTFILES:M*\:jigyosyo:C@\:jigyosyo@@}) urls="$${urls} $${url}" ;; \
-		*) continue ;; \
-		esac ; \
-	done && \
-	cd ${DISTDIR}/${DIST_SUBDIR} && \
-		for url in $${urls}; do \
-			${FETCH_BINARY} -Fmp $${url} ; \
-		done
+		${AWK} ' / href="/ \
+			{ sub(/.* href="/,""); sub(/".*/, ""); \
+			url=$$0; file=$$0; sub(/\/[^\/]+$$/, "/", url); sub(/.*\//, "", file); \
+			printf("UTDIC_MASTER_SITES+=\t%s:jawiki_latest_pages_articles_multistream_index\nUTDIC_DISTFILES+=\t%s:jawiki_latest_pages_articles_multistream_index\n", url, file); \
+			} ' > ${MASTERDIR}/Makefile.jawiki_latest_pages_articles_multistream_index
 	@${MAKE} makesum
 
 .include <bsd.port.post.mk>
