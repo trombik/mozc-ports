@@ -1,6 +1,6 @@
 PORTNAME=	mozc
 DISTVERSION=	3.33.6133.102
-PORTREVISION?=	12
+PORTREVISION?=	13
 CATEGORIES=	japanese
 
 MASTER_SITES=	https://go.dev/dl/?mode=json&include=all&file=versions.json/:versions_json
