@@ -1,0 +1,14 @@
+[
+{ type: install
+  message: <<EOM
+The dictionary files reside under %%DATADIR%%.
+
+To import the dictionary:
+
+1. install japanese/mozc-tool
+2. run `mozc_tool dictionary_tool`
+3. [Tools] > [Import as new dictionary]
+4. Import all *.tsv files under %%DATADIR%%
+EOM
+}
+]

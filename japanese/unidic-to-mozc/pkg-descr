@@ -1,0 +1,3 @@
+Mozc user dictionary files, generated from 現代書き言葉 UniDic. The dictionary
+is a "user" dictionary, meaning that you have to manually import the
+dictionary with `mozc_tool dictionary_tool`.
