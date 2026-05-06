@@ -34,7 +34,7 @@
      # module_ctx doesn't have delete, but its files are temporary anyway.
      if hasattr(ctx, "delete"):
 -        ctx.delete("versions.json")
-+      ctx.delete("%%BAZEL_WRKSRC%%/versions.json")
++        ctx.delete("%%BAZEL_WRKSRC%%/versions.json")
      return _parse_versions_json(data)
  
  def parse_version(version):

@@ -1,6 +1,6 @@
 PORTNAME=	mozc
 DISTVERSION=	3.33.6133.102
-PORTREVISION?=	11
+PORTREVISION?=	13
 CATEGORIES=	japanese
 
 MASTER_SITES=	https://go.dev/dl/?mode=json&include=all&file=versions.json/:versions_json
@@ -8,8 +8,9 @@ DISTFILES=	versions.json:versions_json
 MASTER_SITES+=	https://github.com/bats-core/bats-core/archive/:bats_core
 DISTFILES+=	v1.10.0.tar.gz:bats_core
 
-DIST_SUBDIR=	${PORTNAME}
 .include "Makefile.MASTER_SITES"
+
+DIST_SUBDIR=	${PORTNAME}
 
 EXTRACT_ONLY=	${_DISTFILES:Mbazelbuild-*} \
 		${_DISTFILES:Me-kato-*} \
@@ -32,7 +33,6 @@ LICENSE_PERMS_NAISTL=	dist-mirror dist-sell pkg-mirror pkg-sell auto-accept
 LICENSE_DISTFILES_BSD3CLAUSE=	${DISTNAME}${EXTRACT_SUFX}
 LICENSE_DISTFILES_NAISTL=	${DISTNAME}${EXTRACT_SUFX}
 
-PATCH_DEPENDS=	${PYTHON_CMD}:${PYTHON_PORTSDIR}
 BUILD_DEPENDS=	bash:shells/bash \
 		bazel:devel/bazel8
 RUN_DEPENDS=	xdg-open:devel/xdg-utils
@@ -41,7 +41,7 @@ USES=	compiler:c++20-lang gmake java:build localbase pkgconfig \
 	python:3.10+,build shebangfix tar:bzip2
 
 USE_GITHUB=	yes
-GH_TUPLE=	fcitx:mozc:4862175
+GH_TUPLE=	fcitx:mozc:a897811
 GH_TUPLE+=	bazelbuild:bazel-central-registry:2d4a147:bcr
 
 JAVA_VERSION=	21
@@ -87,8 +87,9 @@ PKGNAMESUFFIX=	-server
 PKGMESSAGE=	${FILESDIR}/pkg-message
 
 # zip code
-MASTER_SITES+=	https://www.post.japanpost.jp/zipcode/dl/kogaki/zip/:kenall \
-		https://www.post.japanpost.jp/zipcode/dl/jigyosyo/zip/:jigyosyo
+ZIP_CODE_TAGNAME=	621d059fbcbfae17bfca15b439692bae934268c3
+MASTER_SITES+=	https://github.com/hiroyuki-komatsu/japanpost_zipcode/raw/${ZIP_CODE_TAGNAME}/:kenall \
+		https://github.com/hiroyuki-komatsu/japanpost_zipcode/raw/${ZIP_CODE_TAGNAME}/:jigyosyo
 DISTFILES+=	ken_all.zip:kenall \
 		jigyosyo.zip:jigyosyo
 # usage dictionary
@@ -98,6 +99,8 @@ OPTIONS_DEFINE=	UTDIC
 OPTIONS_MULTI=	UTDIC
 OPTIONS_MULTI_UTDIC=	ALTCANNADIC EDICT2 JAWIKI NEOLOGD PERSONALNAME \
 		PLACENAME SKKJISYO SUDACHIDICT
+
+UTDIC_PATCH_DEPENDS=	${PYTHON_CMD}:${PYTHON_PORTSDIR}
 
 ALTCANNADIC_DESC=	Dictionary from Alt-Cannadic
 EDICT2_DESC=		Dictionary from EDICT2
@@ -126,12 +129,13 @@ SKKJISYO_GH_TUPLE=	utuhiro78:mozcdic-ut-skk-jisyo:384ad92:skkjisyo
 SUDACHIDICT_GH_TUPLE=	utuhiro78:mozcdic-ut-sudachidict:6c8307c:sudachi
 # APACHE20 multi
 UTDIC_GH_TUPLE=		utuhiro78:merge-ut-dictionaries:aae6bec:ut
-UTDIC_MASTER_SITES=	https://dumps.wikimedia.org/jawiki/latest/:jawiki_latest_pages_articles_multistream_index
-UTDIC_DISTFILES=	jawiki-latest-pages-articles-multistream-index.txt.bz2:jawiki_latest_pages_articles_multistream_index
+
+.include "Makefile.jawiki_latest_pages_articles_multistream_index"
 
 .elif ${BUILD_MOZC_LIST:Mmozc_tool} == "mozc_tool"
 
 BUILD_DEPENDS+=	libglvnd>0:graphics/libglvnd
+RUN_DEPENDS+=	mozc:japanese/mozc-server
 
 USES+=		qt:6
 USE_LOCALE=	C.UTF-8
@@ -140,12 +144,12 @@ USE_QT=		base
 .elif ${BUILD_MOZC_LIST:Mibus_mozc} == "ibus_mozc"
 
 BUILD_DEPENDS+=	libglvnd>0:graphics/libglvnd
-LIB_DEPENDS+=	libfontconfig.so:x11-fonts/fontconfig \
-		libfreetype.so:print/freetype2
+LIB_DEPENDS+=	libibus-1.0.so:textproc/ibus
+RUN_DEPENDS+=	mozc:japanese/mozc-server \
+		mozc_tool:japanese/mozc-tool
 
-USES+=		gettext-runtime gnome qt:6 xorg
-USE_XORG=	xcb
-USE_GNOME=	cairo gdkpixbuf glib20 gtk20
+USES+=		gettext-runtime gnome qt:6
+USE_GNOME=	glib20
 USE_LOCALE=	C.UTF-8
 USE_QT=		base
 
@@ -249,7 +253,7 @@ post-patch-mozc_server:
 		${PATCH} < ${PATCHDIR}/extra-patch-merge_dictionaries.py && \
 		${REINPLACE_CMD} -e 's@%%WRKSRC%%@${WRKSRC}@' merge_dictionaries.py && \
 		${CP} ${BAZEL_WRKSRC}/data/dictionary_oss/id.def . && \
-		${CP} ${DISTDIR}/${DIST_SUBDIR}/${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@} . && \
+		${CP} ${DISTDIR}/${DIST_SUBDIR}/${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@} jawiki-latest-pages-articles-multistream-index.txt.bz2 && \
 		${BZCAT} ../../../mozcdic-ut-*/mozcdic-ut-*.txt.bz2 > mozcdic-ut.txt && \
 		${PYTHON_CMD} merge_dictionaries.py mozcdic-ut.txt && \
 		${CAT} mozcdic-ut.txt \
@@ -261,7 +265,6 @@ post-extract: post-extract-mozc_server
 post-patch: post-patch-mozc_server
 
 do-build-mozc_server:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //server:mozc_server
 
@@ -284,7 +287,6 @@ PLIST_FILES+=	libexec/mozc_tool \
 SUB_FILES+=	mozc_tool
 
 do-build-mozc_tool:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //gui/tool:mozc_tool
 
@@ -305,10 +307,6 @@ do-install-mozc_tool:
 .endif
 
 .if ${BUILD_MOZC_LIST:Mibus_mozc} == "ibus_mozc"
-
-LIB_DEPENDS+=	libibus-1.0.so:textproc/ibus
-RUN_DEPENDS+=	mozc:japanese/mozc-server \
-		mozc_tool:japanese/mozc-tool
 
 PLIST_FILES+=	libexec/mozc_renderer \
 		libexec/ibus-engine-mozc \
@@ -333,7 +331,6 @@ post-patch-ibus_mozc:
 post-patch: post-patch-ibus_mozc
 
 do-build-ibus_mozc:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //unix/ibus:ibus_mozc \
 			//unix/ibus:gen_mozc_xml \
@@ -346,7 +343,7 @@ do-install-ibus_mozc:
 	${INSTALL_PROGRAM} \
 		${BAZEL_WRKSRC}/bazel-out/freebsd-opt/bin/unix/ibus/ibus_mozc \
 		${STAGEDIR}${PREFIX}/libexec/ibus-engine-mozc
-	${MKDIR} ${STAGEDIR}${PREFIX}/share/ibus/component
+	@${MKDIR} ${STAGEDIR}${PREFIX}/share/ibus/component
 	${INSTALL_DATA} \
 		${BAZEL_WRKSRC}/bazel-out/freebsd-opt/bin/unix/ibus/mozc.xml \
 		${STAGEDIR}${PREFIX}/share/ibus/component/mozc.xml
@@ -366,6 +363,10 @@ do-install-ibus_mozc:
 
 LICENSE_FILE+=	${BAZEL_WRKSRC}/src/unix/uim/LICENSE
 
+LIB_DEPENDS+=	libuim.so:textproc/uim
+RUN_DEPENDS+=	mozc:japanese/mozc-server \
+		mozc_tool:japanese/mozc-tool
+
 GH_TUPLE+=	e-kato:macuim:7beac7b:MU
 
 # These patches are from https://github.com/femshima/uim-mozc
@@ -375,10 +376,6 @@ EXTRA_PATCHES=	${PATCHDIR}/extra-patch-src_MODULE.bazel \
 		${PATCHDIR}/extra-patch-src_unix_uim_key__translator.cc \
 		${PATCHDIR}/extra-patch-src_unix_uim_key__translator.h \
 		${PATCHDIR}/extra-patch-src_unix_uim_mozc.cc
-
-LIB_DEPENDS+=	libuim.so:textproc/uim
-RUN_DEPENDS+=	mozc:japanese/mozc-server \
-		mozc_tool:japanese/mozc-tool
 
 PLIST_FILES+=	lib/uim/plugin/libuim-mozc.so \
 		%%DATADIR%%/mozc.scm \
@@ -406,20 +403,19 @@ post-patch-uim_mozc:
 post-patch: post-patch-uim_mozc
 
 do-build-uim_mozc:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC}&& \
 		${BUILD_MOZC_CMD} //unix/uim:uim-mozc
 
 do-install-uim_mozc:
-	${MKDIR} ${STAGEDIR}${PREFIX}/lib/uim/plugin
+	@${MKDIR} ${STAGEDIR}${PREFIX}/lib/uim/plugin
 	${INSTALL_LIB} \
 		${BAZEL_WRKSRC}/bazel-out/freebsd-opt/bin/unix/uim/libuim-mozc.so \
 		${STAGEDIR}${PREFIX}/lib/uim/plugin
-	${MKDIR} ${STAGEDIR}${DATADIR}
+	@${MKDIR} ${STAGEDIR}${DATADIR}
 	cd ${WRKSRC_MU}/Mozc/scm && \
 		${INSTALL_DATA} mozc.scm mozc-custom.scm mozc-key-custom.scm \
 		${STAGEDIR}${DATADIR}
-	${MKDIR} ${STAGEDIR}${DATADIR}/pixmaps
+	@${MKDIR} ${STAGEDIR}${DATADIR}/pixmaps
 	${INSTALL_DATA} \
 		${BAZEL_WRKSRC}/data/images/product_icon_32bpp-128.png \
 		${STAGEDIR}${DATADIR}/pixmaps/mozc.png
@@ -464,7 +460,6 @@ PLIST_FILES+=	lib/fcitx/fcitx-mozc.so \
 PLIST_DIRS+=	%%DATADIR%%/icon ${DATADIR_REL}
 
 do-build-fcitx_mozc:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //unix/fcitx:fcitx-mozc.so
 	cd ${BAZEL_WRKSRC}/unix/fcitx && ${SH} gen_fcitx_mozc_i18n.sh ./po
@@ -538,7 +533,6 @@ PLIST_FILES+=	lib/fcitx5/fcitx5-mozc.so \
 		share/metainfo/org.fcitx.Fcitx5.Addon.Mozc.metainfo.xml
 
 do-build-fcitx5_mozc:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //unix/fcitx5:fcitx5-mozc.so; \
 		msgfmt --xml -d unix/fcitx5/po/ \
@@ -593,8 +587,7 @@ CATEGORIES+=	elisp
 RUN_DEPENDS+=	mozc:japanese/mozc-server
 
 NO_ARCH=	yes
-PLIST_FILES+=	${EMACS_SITE_LISPDIR}/mozc/mozc.elc \
-		${EMACS_SITE_LISPDIR}/mozc/mozc.el.gz \
+PLIST_FILES+=	${EMACS_SITE_LISPDIR}/mozc/mozc.el.gz \
 		${EMACS_SITE_LISPDIR}/mozc/leim-list.el \
 		libexec/mozc_emacs_helper
 PLIST_DIRS+=	${EMACS_SITE_LISPDIR}/mozc
@@ -606,13 +599,9 @@ post-patch-mozc_el:
 post-patch: post-patch-mozc_el
 
 do-build-mozc_el:
-	${MKDIR} ${WRKDIR}/bazel_tmp
 	cd ${BAZEL_WRKSRC} && \
 		${BUILD_MOZC_CMD} //unix/emacs:mozc_emacs_helper
-	cd ${BAZEL_WRKSRC}/unix/emacs && \
-		${EMACS_CMD} -batch -q -no-site-file -no-init-file \
-			-f batch-byte-compile mozc.el && \
-		${GZIP_CMD} mozc.el
+	cd ${BAZEL_WRKSRC}/unix/emacs && ${GZIP_CMD} mozc.el
 
 do-install-mozc_el:
 	@${MKDIR} ${STAGEDIR}${PREFIX}/${EMACS_SITE_LISPDIR}/mozc
@@ -621,11 +610,13 @@ do-install-mozc_el:
 		${STAGEDIR}${PREFIX}/libexec
 	${INSTALL_DATA} \
 		${BAZEL_WRKSRC}/unix/emacs/mozc.el.gz \
-		${BAZEL_WRKSRC}/unix/emacs/mozc.elc \
 		${FILESDIR}/leim-list.el \
 		${STAGEDIR}${PREFIX}/${EMACS_SITE_LISPDIR}/mozc/
 
 .endif
+
+pre-build:
+	@${MKDIR} ${WRKDIR}/bazel_tmp
 
 do-build: ${BUILD_MOZC_LIST:S/^/do-build-/}
 do-install: ${BUILD_MOZC_LIST:S/^/do-install-/}
@@ -674,18 +665,13 @@ print-bazel-modules: configure
 
 # Create new distinfo: `make renew-makesum`
 renew-makesum:
-	@for url in `${MAKE} fetch-url-list | ${GREP} -v 'FreeBSD\.org'`; do \
-		case $${url} in \
-		*${UTDIC_DISTFILES:M*\:jawiki_latest_pages_articles_multistream_index:C@\:jawiki_latest_pages_articles_multistream_index@@}) urls="$${urls} $${url}" ;; \
-		*${DISTFILES:M*\:kenall:C@\:kenall@@}) urls="$${urls} $${url}" ;; \
-		*${DISTFILES:M*\:jigyosyo:C@\:jigyosyo@@}) urls="$${urls} $${url}" ;; \
-		*) continue ;; \
-		esac ; \
-	done && \
-	cd ${DISTDIR}/${DIST_SUBDIR} && \
-		for url in $${urls}; do \
-			${FETCH_BINARY} -Fmp $${url} ; \
-		done
+	@${FETCH_CMD} -q \
+		https://dumps.wikimedia.org/jawiki/latest/jawiki-latest-pages-articles-multistream-index.txt.bz2-rss.xml -o - | \
+		${AWK} ' / href="/ \
+			{ sub(/.* href="/,""); sub(/".*/, ""); \
+			url=$$0; file=$$0; sub(/\/[^\/]+$$/, "/", url); sub(/.*\//, "", file); \
+			printf("UTDIC_MASTER_SITES+=\t%s:jawiki_latest_pages_articles_multistream_index\nUTDIC_DISTFILES+=\t%s:jawiki_latest_pages_articles_multistream_index\n", url, file); \
+			} ' > ${MASTERDIR}/Makefile.jawiki_latest_pages_articles_multistream_index
 	@${MAKE} makesum
 
 .include <bsd.port.post.mk>
